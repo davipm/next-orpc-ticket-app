@@ -78,36 +78,24 @@ export const useUpdateTicket = () => {
           queryKey: orpc.ticket.getAll.queryKey(),
         });
 
-        const previousTickets = queryClient.getQueriesData<TicketsResponse>({
-          queryKey: orpc.ticket.getAll.queryKey(),
+        const previousTickets = queryClient.getQueryData(orpc.ticket.getAll.queryKey());
+
+        queryClient.setQueryData(orpc.ticket.getAll.queryKey(), (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            tickets: old.tickets.map((ticket) =>
+              ticket.id === id ? { ...ticket, ...data } : ticket,
+            ),
+          };
         });
 
-        queryClient.setQueriesData(
-          { queryKey: orpc.ticket.getAll.queryKey() },
-          (old: TicketsResponse) => {
-            if (!old) return old;
-            return {
-              ...old,
-              tickets: old.tickets.map((ticket) =>
-                ticket.id === id ? { ...ticket, ...data } : ticket,
-              ),
-            };
-          },
-        );
-
+        toast.success(`Ticket "${data.title}" updated successfully`);
         return { previousTickets };
       },
       onError: (error, variables, context) => {
-        if (context?.previousTickets) {
-          Object.entries(context.previousTickets).forEach(([queryKey, data]) => {
-            queryClient.setQueryData([queryKey], data);
-          });
-        }
-
+        queryClient.setQueryData(orpc.ticket.getAll.queryKey(), context?.previousTickets);
         toast.error(`Failed to update ticket "${variables.id}". ${error.message}`);
-      },
-      onSuccess: (_, variables) => {
-        toast.success(`Ticket "${variables.id}" updated successfully`);
       },
       onSettled: async () => {
         await queryClient.invalidateQueries({
