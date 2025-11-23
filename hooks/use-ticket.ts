@@ -24,7 +24,7 @@ export const useCreateTicket = () => {
     orpc.ticket.create.mutationOptions({
       onMutate: async (newTicket) => {
         await queryClient.cancelQueries({
-          queryKey: orpc.ticket.getAll.queryKey(),
+          queryKey: orpc.ticket.key(),
         });
 
         const previousTickets = queryClient.getQueriesData<TicketsResponse>({
@@ -59,7 +59,7 @@ export const useCreateTicket = () => {
       },
       onSettled: async () => {
         await queryClient.invalidateQueries({
-          queryKey: orpc.ticket.getAll.queryKey(),
+          queryKey: orpc.ticket.key({ type: 'query' }),
         });
       },
     }),
@@ -75,7 +75,7 @@ export const useUpdateTicket = () => {
     orpc.ticket.update.mutationOptions({
       onMutate: async ({ id, data }) => {
         await queryClient.cancelQueries({
-          queryKey: orpc.ticket.getAll.queryKey(),
+          queryKey: orpc.ticket.key(),
         });
 
         const previousTickets = queryClient.getQueryData(orpc.ticket.getAll.queryKey());
@@ -99,7 +99,7 @@ export const useUpdateTicket = () => {
       },
       onSettled: async () => {
         await queryClient.invalidateQueries({
-          queryKey: orpc.ticket.getAll.queryKey(),
+          queryKey: orpc.ticket.key({ type: 'query' }),
         });
       },
     }),
@@ -115,7 +115,7 @@ export const useDeleteTicket = () => {
     orpc.ticket.delete.mutationOptions({
       onMutate: async ({ id }) => {
         await queryClient.cancelQueries({
-          queryKey: orpc.ticket.getAll.queryKey(),
+          queryKey: orpc.ticket.key(),
         });
 
         const previousTickets = queryClient.getQueryData(orpc.ticket.getAll.queryKey());
@@ -138,7 +138,7 @@ export const useDeleteTicket = () => {
       },
       onSettled: async () => {
         await queryClient.invalidateQueries({
-          queryKey: orpc.ticket.getAll.queryKey(),
+          queryKey: orpc.ticket.key({ type: 'query' }),
         });
       },
     }),
