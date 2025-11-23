@@ -19,4 +19,6 @@ model Ticket {
   active      Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("createdAt")
   updatedAt   DateTime @updatedAt @map("updatedAt")
+
+  @@map("ticket")
 }
