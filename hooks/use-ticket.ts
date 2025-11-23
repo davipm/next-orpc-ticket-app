@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { TicketResponseSchema, TicketsResponse } from '@/server/schemas/ticket-schemas';
+import type { TicketsResponse } from '@/server/schemas/ticket-schemas';
 import { orpc } from '@/utils/orpc';
 
 export const useTickets = () => {
@@ -22,22 +22,22 @@ export const useCreateTicket = () => {
 
   const { mutate: createTicketMutation, ...rest } = useMutation(
     orpc.ticket.create.mutationOptions({
-      onMutate: async (task) => {
+      onMutate: async (newTicket) => {
         await queryClient.cancelQueries({
-          queryKey: orpc.ticket.key({ type: 'query' }),
+          queryKey: orpc.ticket.getAll.queryKey(),
         });
 
-        const previousTickets = queryClient.getQueriesData<TicketResponseSchema[]>({
-          queryKey: orpc.ticket.key({ type: 'query' }),
+        const previousTickets = queryClient.getQueriesData<TicketsResponse>({
+          queryKey: orpc.ticket.getAll.queryKey(),
         });
 
         queryClient.setQueriesData(
-          { queryKey: orpc.ticket.key({ type: 'query' }) },
+          { queryKey: orpc.ticket.getAll.queryKey() },
           (old: TicketsResponse) => {
             if (!old) return old;
             return {
               ...old,
-              tickets: [...old.tickets, { ...task, id: Math.random().toString() }],
+              tickets: [...old.tickets, { ...newTicket, id: Math.random().toString() }],
               total: old.total + 1,
             };
           },
@@ -45,18 +45,21 @@ export const useCreateTicket = () => {
 
         return { previousTickets };
       },
-      onError: (error, { title }, context) => {
+      onError: (error, variables, context) => {
         if (context?.previousTickets) {
-          context.previousTickets.forEach(([queryKey, data]) => {
-            queryClient.setQueryData(queryKey, data);
+          Object.entries(context.previousTickets).forEach(([queryKey, data]) => {
+            queryClient.setQueryData([queryKey], data);
           });
         }
 
-        toast.error(`${error.message} Failed to create ticket ${title}. Please try again.`);
+        toast.error(`Failed to create ticket "${variables.title}". ${error.message}`);
+      },
+      onSuccess: () => {
+        toast.success('Ticket created successfully');
       },
       onSettled: async () => {
         await queryClient.invalidateQueries({
-          queryKey: orpc.ticket.key({ type: 'query' }),
+          queryKey: orpc.ticket.getAll.queryKey(),
         });
       },
     }),
@@ -72,34 +75,39 @@ export const useUpdateTicket = () => {
     orpc.ticket.update.mutationOptions({
       onMutate: async ({ id, data }) => {
         await queryClient.cancelQueries({
-          queryKey: orpc.ticket.key({ type: 'query' }),
+          queryKey: orpc.ticket.getAll.queryKey(),
         });
 
-        const previousTickets = queryClient.getQueriesData({
-          queryKey: orpc.ticket.key({ type: 'query' }),
+        const previousTickets = queryClient.getQueriesData<TicketsResponse>({
+          queryKey: orpc.ticket.getAll.queryKey(),
         });
 
         queryClient.setQueriesData(
-          { queryKey: orpc.ticket.key({ type: 'query' }) },
+          { queryKey: orpc.ticket.getAll.queryKey() },
           (old: TicketsResponse) => {
             if (!old) return old;
             return {
               ...old,
-              tickets: old.tickets.map((item) => (item.id === id ? { ...item, ...data } : item)),
+              tickets: old.tickets.map((ticket) =>
+                ticket.id === id ? { ...ticket, ...data } : ticket,
+              ),
             };
           },
         );
 
         return { previousTickets };
       },
-      onError: (error, { id }, context) => {
+      onError: (error, variables, context) => {
         if (context?.previousTickets) {
-          context.previousTickets.forEach(([queryKey, data]) => {
-            queryClient.setQueryData(queryKey, data);
+          Object.entries(context.previousTickets).forEach(([queryKey, data]) => {
+            queryClient.setQueryData([queryKey], data);
           });
         }
 
-        toast.error(`${error.message} Failed to delete ticket ${id}. Please try again.`);
+        toast.error(`Failed to update ticket "${variables.id}". ${error.message}`);
+      },
+      onSuccess: (_, variables) => {
+        toast.success(`Ticket "${variables.id}" updated successfully`);
       },
       onSettled: async () => {
         await queryClient.invalidateQueries({
@@ -119,38 +127,42 @@ export const useDeleteTicket = () => {
     orpc.ticket.delete.mutationOptions({
       onMutate: async ({ id }) => {
         await queryClient.cancelQueries({
-          queryKey: orpc.ticket.key({ type: 'query' }),
+          queryKey: orpc.ticket.getAll.queryKey(),
         });
 
-        const previousTickets = queryClient.getQueriesData({
-          queryKey: orpc.ticket.key({ type: 'query' }),
+        const previousTickets = queryClient.getQueriesData<TicketsResponse>({
+          queryKey: orpc.ticket.getAll.queryKey(),
         });
 
         queryClient.setQueriesData(
-          { queryKey: orpc.ticket.key({ type: 'query' }) },
+          { queryKey: orpc.ticket.getAll.queryKey() },
           (old: TicketsResponse) => {
             if (!old) return old;
             return {
               ...old,
-              tickets: old.tickets.filter((task) => task.id !== id),
+              tickets: old.tickets.filter((ticket) => ticket.id !== id),
               total: old.total - 1,
             };
           },
         );
 
-        toast.success(`Ticket ${id} deleted successfully.`);
         return { previousTickets };
       },
-      onError: (error, { id }, context) => {
-        queryClient.setQueriesData(
-          { queryKey: orpc.ticket.key({ type: 'query' }) },
-          context?.previousTickets,
-        );
-        toast.error(`${error.message} Failed to delete ticket ${id}. Please try again.`);
+      onError: (error, variables, context) => {
+        if (context?.previousTickets) {
+          Object.entries(context.previousTickets).forEach(([queryKey, data]) => {
+            queryClient.setQueryData([queryKey], data);
+          });
+        }
+
+        toast.error(`Failed to delete ticket "${variables.id}". ${error.message}`);
+      },
+      onSuccess: (_, variables) => {
+        toast.success(`Ticket "${variables.id}" deleted successfully`);
       },
       onSettled: async () => {
         await queryClient.invalidateQueries({
-          queryKey: orpc.ticket.key({ type: 'query' }),
+          queryKey: orpc.ticket.getAll.queryKey(),
         });
       },
     }),
