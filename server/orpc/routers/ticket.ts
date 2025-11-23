@@ -6,11 +6,11 @@ import {
   createTicketSchema,
   ticketIdSchema,
   ticketResponseSchema,
-  updateTicketSchema
-} from "@/server/schemas/ticket-schemas";
+  updateTicketSchema,
+} from '@/server/schemas/ticket-schemas';
 
 export const ticketRouter = {
-  getAll: publicProcedure
+  list: publicProcedure
     .route({ method: 'GET', path: '/tickets' })
     .output(z.object({ tickets: z.array(ticketResponseSchema), total: z.number() }))
     .handler(async () => {
