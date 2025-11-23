@@ -130,35 +130,23 @@ export const useDeleteTicket = () => {
           queryKey: orpc.ticket.getAll.queryKey(),
         });
 
-        const previousTickets = queryClient.getQueriesData<TicketsResponse>({
-          queryKey: orpc.ticket.getAll.queryKey(),
+        const previousTickets = queryClient.getQueryData(orpc.ticket.getAll.queryKey());
+
+        queryClient.setQueryData(orpc.ticket.getAll.queryKey(), (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            tickets: old.tickets.filter((task) => task.id !== id),
+            total: old.total - 1,
+          };
         });
 
-        queryClient.setQueriesData(
-          { queryKey: orpc.ticket.getAll.queryKey() },
-          (old: TicketsResponse) => {
-            if (!old) return old;
-            return {
-              ...old,
-              tickets: old.tickets.filter((ticket) => ticket.id !== id),
-              total: old.total - 1,
-            };
-          },
-        );
-
+        toast.success(`Ticket ${id} deleted successfully.`);
         return { previousTickets };
       },
-      onError: (error, variables, context) => {
-        if (context?.previousTickets) {
-          Object.entries(context.previousTickets).forEach(([queryKey, data]) => {
-            queryClient.setQueryData([queryKey], data);
-          });
-        }
-
-        toast.error(`Failed to delete ticket "${variables.id}". ${error.message}`);
-      },
-      onSuccess: (_, variables) => {
-        toast.success(`Ticket "${variables.id}" deleted successfully`);
+      onError: (error, { id }, context) => {
+        queryClient.setQueryData(orpc.ticket.getAll.queryKey(), context?.previousTickets);
+        toast.error(`${error.message} Failed to delete ticket ${id}. Please try again.`);
       },
       onSettled: async () => {
         await queryClient.invalidateQueries({
